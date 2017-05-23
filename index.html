@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>
+        Pomelo
+    </title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <meta http-equiv="content-style-type" content="text/css" />
+    <meta http-equiv="content-scripte-type" content="text/javascript" />
+    <meta name="author" content="netease" />
+    <meta name="version" content="1.0" />
+    <meta name="keywords" content="pomelo" />
+    <script src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.css" type="text/css" />
+    <link rel="stylesheet" href="css/bootstrap-theme.css" type="text/css" />
+    <link rel="stylesheet" href="css/extra.css" type="text/css" />
+    <script src="js/lib/build/build.js" type="text/javascript"></script>
+    <link rel="stylesheet" type="text/css" href="css/demo.css" />
+    <link rel="stylesheet" type="text/css" href="css/styles.css" />
+    <script type="text/javascript" src="js/three.min.js"></script>
+    <script type="text/javascript" src="js/main_step.js" /></script>
+    <!--[if IE]>
+        <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+    <style>
+    body #cdawrap {
+        background: none;
+        border: 1px solid #d1b790;
+        top: auto;
+        bottom: 12px;
+        left: 12px;
+        right: auto;
+    }
+    </style>
+    <script type="text/javascript">
+    require('boot');
+    </script>
+</head>
+
+<body>
+    <div class="world" id="world"></div>
+    <script type="text/javascript">
+    var Colors = {
+        red: 0xf25346,
+        blue: 0x3b50ce,
+        white: 0xd8d0d1,
+        pink: 0xF5986E,
+        brown: 0x59332e,
+        brownDark: 0x23190f,
+        blue: 0x68c3c0,
+    };
+
+    var RandColors = new Array();
+
+    randColors();
+
+    function randColors() {
+        RandColors.push(0x3b50ce);
+        RandColors.push(0x512da8);
+        RandColors.push(0x1E88E5);
+        RandColors.push(0x00838F);
+        RandColors.push(0x388E3C);
+        RandColors.push(0x2979FF);
+        RandColors.push(0xd32f2f);
+        RandColors.push(0x8E24AA);
+        RandColors.push(0xFDD835);
+        RandColors.push(0x757575);
+        RandColors.push(0xF4511E);
+        RandColors.push(0xEF6C00);
+        RandColors.push(0x546E7A);
+        RandColors.push(0x2962FF);
+        RandColors.push(0xD500F9);
+        RandColors.push(0x03A9F4);
+    }
+
+    var scene,
+        camera, fieldOfView, aspectRatio, nearPlane, farPlane,
+        renderer, container;
+
+    var mainPlayer;
+    var enemyList = new Array();
+    var wallList = new Array();
+    var next = 0;
+    var bulletList = new Array();
+    var enemyBulletList = new Array();
+
+    var HEIGHT, WIDTH;
+
+
+    function createScene() {
+
+        HEIGHT = window.innerHeight;
+        WIDTH = window.innerWidth;
+
+        scene = new THREE.Scene();
+        aspectRatio = WIDTH / HEIGHT;
+        fieldOfView = 60;
+        nearPlane = 1;
+        farPlane = 10000;
+        camera = new THREE.PerspectiveCamera(
+            fieldOfView,
+            aspectRatio,
+            nearPlane,
+            farPlane
+        );
+        scene.fog = new THREE.Fog(0xf7d9aa, 100, 950);
+        // scene.fog = new THREE.Fog(0x68c3c0, 100, 950);
+        camera.position.x = 0;
+        camera.position.z = 200;
+        camera.position.y = 0;
+
+        renderer = new THREE.WebGLRenderer({
+            alpha: true,
+            antialias: true
+        });
+        renderer.setSize(WIDTH, HEIGHT);
+        renderer.shadowMap.enabled = true;
+        container = document.getElementById('world');
+        container.appendChild(renderer.domElement);
+        window.addEventListener('resize', handleWindowResize, false);
+    }
+
+    function handleWindowResize() {
+        HEIGHT = window.innerHeight;
+        WIDTH = window.innerWidth;
+        renderer.setSize(WIDTH, HEIGHT);
+        camera.aspect = WIDTH / HEIGHT;
+        camera.updateProjectionMatrix();
+    }
+
+    var ambientLight, hemisphereLight, shadowLight;
+
+    function createLights() {
+
+        hemisphereLight = new THREE.HemisphereLight(0xaaaaaa, 0x000000, .9);
+
+        ambientLight = new THREE.AmbientLight(0xdc8874, .5);
+
+        shadowLight = new THREE.DirectionalLight(0xffffff, .9);
+        shadowLight.position.set(150, 350, 350);
+        shadowLight.castShadow = true;
+        shadowLight.shadow.camera.left = -400;
+        shadowLight.shadow.camera.right = 400;
+        shadowLight.shadow.camera.top = 400;
+        shadowLight.shadow.camera.bottom = -400;
+        shadowLight.shadow.camera.near = 1;
+        shadowLight.shadow.camera.far = 1000;
+        shadowLight.shadow.mapSize.width = 2048;
+        shadowLight.shadow.mapSize.height = 2048;
+
+        scene.add(hemisphereLight);
+        scene.add(shadowLight);
+        scene.add(ambientLight);
+    }
+
+    Wall = function(name, width, length) {
+        this.mesh = new THREE.Object3D();
+        this.mesh.name = name;
+
+        var geomWall = new THREE.BoxGeometry(width, length, 20, 1, 1, 1);
+        var matWall = new THREE.MeshPhongMaterial({
+            color: Colors.red,
+            shading: THREE.FlatShading
+        });
+
+        for (var j = 0; j < 8; j++) {
+            geomWall.vertices[j].z += 8;
+        }
+
+        var wall = new THREE.Mesh(geomWall, matWall);
+        wall.castShadow = true;
+        wall.receiveShadow = true;
+        this.mesh.add(wall);
+    }
+
+    function createWall(name, x, y, width, r) {
+        var wall;
+        if (r) {
+            wall = new Wall(name, width, 4);
+        } else {
+            wall = new Wall(name, 4, width);
+        }
+        // wall.mesh.scale.set(.25, .25, .25);
+        wall.mesh.position.x = x;
+        wall.mesh.position.y = y;
+        scene.add(wall.mesh);
+        wallList.push(wall);
+    }
+
+    AirPlane = function(name) {
+
+        this.mesh = new THREE.Object3D();
+        this.mesh.name = name;
+
+        var geomCockpit = new THREE.BoxGeometry(16, 16, 16, 1, 1, 1);
+        var matCockpit = new THREE.MeshPhongMaterial({
+            color: RandColors[Math.floor(Math.random() * 16 - 1)],
+            shading: THREE.FlatShading
+        });
+
+        var cockpit = new THREE.Mesh(geomCockpit, matCockpit);
+
+        cockpit.castShadow = true;
+        cockpit.receiveShadow = true;
+        this.mesh.add(cockpit);
+
+        var high = 4;
+        var dy = 12;
+        for (var i = 0; i < 8; i++) {
+            var geomBlood = new THREE.BoxGeometry(2, 2, 2, 1, 1, 1);
+            for (var j = 0; j < 8; j++) {
+                geomBlood.vertices[j].z += high;
+                geomBlood.vertices[j].y += dy;
+                geomBlood.vertices[j].x += 7 - 2 * i;
+            }
+            var matBlood = new THREE.MeshPhongMaterial({
+                color: Colors.red,
+                shading: THREE.FlatShading
+            });
+            var blood = new THREE.Mesh(geomBlood, matBlood);
+            blood.castShadow = true;
+            blood.receiveShadow = true;
+            this.mesh.add(blood);
+        }
+
+        this.color = this.mesh.children[1].material.color;
+        this.nextMove();
+    }
+
+    Bullet = function(name, color) {
+
+        this.mesh = new THREE.Object3D();
+        this.mesh.name = name;
+
+        var geomCockpit = new THREE.SphereGeometry(2);
+        var matCockpit = new THREE.MeshPhongMaterial({
+            color: color,
+            shading: THREE.FlatShading
+        });
+
+        var cockpit = new THREE.Mesh(geomCockpit, matCockpit);
+        cockpit.castShadow = true;
+        cockpit.receiveShadow = true;
+        this.mesh.add(cockpit);
+    }
+
+    function createEnemyBullet(name, sx, sy, ex, ey, v, color) {
+        var bullet = new Bullet(name, color);
+        bullet.mesh.position.x = sx;
+        bullet.mesh.position.y = sy;
+        bullet.ex = ex;
+        bullet.ey = ey;
+        bullet.vx = (ex - sx) / v;
+        bullet.vy = (ey - sy) / v;
+        bullet.v = v;
+        scene.add(bullet.mesh);
+        enemyBulletList.push(bullet);
+    }
+
+    function createBullet(name, sx, sy, ex, ey, v, color) {
+        var bullet = new Bullet(name, color);
+        bullet.mesh.position.x = sx;
+        bullet.mesh.position.y = sy;
+        bullet.ex = ex;
+        bullet.ey = ey;
+        bullet.vx = (ex - sx) / v;
+        bullet.vy = (ey - sy) / v;
+        bullet.v = v;
+        scene.add(bullet.mesh);
+        bulletList.push(bullet);
+    }
+
+    Bullet.prototype.move = function(x) {
+        // this.mesh.rotation.x += 0.01 / this.vx;
+        // this.mesh.rotation.y += 0.01 / this.vy;
+        if ((this.mesh.position.x - this.ex) * (this.mesh.position.x + this.vx - this.ex) <= 0) {
+            scene.remove(scene.getObjectByName(bulletList[x].mesh.name));
+            bulletList.splice(x, 1);
+        }
+
+        this.mesh.rotation.x -= this.vy / 10;
+        this.mesh.rotation.y += this.vx / 10;
+        this.mesh.position.x += this.vx;
+        this.mesh.position.y += this.vy;
+    }
+
+    Bullet.prototype.enemybulletmove = function(x) {
+        // this.mesh.rotation.x += 0.01 / this.vx;
+        // this.mesh.rotation.y += 0.01 / this.vy;
+        if ((this.mesh.position.x - this.ex) * (this.mesh.position.x + this.vx - this.ex) <= 0) {
+            scene.remove(scene.getObjectByName(enemyBulletList[x].mesh.name));
+            enemyBulletList.splice(x, 1);
+        }
+
+        this.mesh.rotation.x -= this.vy / 10;
+        this.mesh.rotation.y += this.vx / 10;
+        this.mesh.position.x += this.vx;
+        this.mesh.position.y += this.vy;
+    }
+
+    AirPlane.prototype.move = function() {
+        // this.mesh.rotation.z -= .05;
+        // this.mesh.rotation.y -= .03;
+        this.count--;
+        if (this.count < 1) this.nextMove();
+        this.mesh.position.x += 1 * Math.cos(this.ang);
+        this.mesh.position.y += 1 * Math.sin(this.ang);
+        if (collide(this, wallList)) {
+            this.mesh.position.x -= 1 * Math.cos(this.ang);
+            this.mesh.position.y -= 1 * Math.sin(this.ang);
+            this.nextMove();
+        }
+    }
+
+    AirPlane.prototype.nextMove = function() {
+        this.ang = 3.14 - Math.random() * 6.28;
+        this.count = 100;
+    }
+
+
+    function create(name, x, y) {
+        var airplane = new AirPlane(name);
+        // airplane.mesh.scale.set(.25, .25, .25);
+        airplane.mesh.position.x = x;
+        airplane.mesh.position.y = y;
+        scene.add(airplane.mesh);
+        return airplane;
+    }
+
+    function createEnemy(name, x, y) {
+        var airplane = new AirPlane(name);
+        // airplane.mesh.scale.set(.25, .25, .25);
+        airplane.mesh.position.x = x;
+        airplane.mesh.position.y = y;
+        airplane.hp = 8;
+        scene.add(airplane.mesh);
+        enemyList.push(airplane);
+        return airplane;
+    }
+
+    function createMainPlayer(name, x, y) {
+        mainPlayer = create(name, x, y);
+        mainPlayer.hp = 8;
+    }
+
+
+    var crash = false;
+
+    function collide(player, others) {
+        var movingCube = player.mesh;
+        var originPoint = movingCube.position.clone();
+        movingCube = movingCube.children[0];
+        var list = new Array();
+        for (var i = 0; i < others.length; i++) {
+            list.push(others[i].mesh.children[0]);
+        }
+        for (var vertexIndex = 0; vertexIndex < movingCube.geometry.vertices.length; vertexIndex++) {
+            // 顶点原始坐标
+            var localVertex = movingCube.geometry.vertices[vertexIndex].clone();
+            // 顶点经过变换后的坐标
+            var globalVertex = localVertex.applyMatrix4(movingCube.matrix);
+            // 获得由中心指向顶点的向量
+            var directionVector = globalVertex.sub(movingCube.position);
+
+            // 将方向向量初始化
+            var ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
+            // 检测射线与多个物体的相交情况
+            var collisionResults = ray.intersectObjects(list);
+            // 如果返回结果不为空，且交点与射线起点的距离小于物体中心至顶点的距离，则发生了碰撞
+            // console.log(collisionResults);
+            if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function playerMove() {
+        var originX = mainPlayer.mesh.position.x;
+        var originY = mainPlayer.mesh.position.y;
+        mainPlayer.mesh.position.y += 3 * (moveUp - moveDown);
+        while (collide(mainPlayer, wallList)) {
+            mainPlayer.mesh.position.y -= moveUp - moveDown;
+        }
+        mainPlayer.mesh.position.x += 3 * (moveLeft - moveRight);
+        while (collide(mainPlayer, wallList)) {
+            mainPlayer.mesh.position.x -= moveLeft - moveRight;
+        }
+        // collide(mainPlayer, wallList);
+    }
+
+    function checkBullet() {
+        var xcount = 0;
+        for (var x = 0; x < bulletList.length; x++) {
+            if (collide(bulletList[x - xcount], wallList)) {
+                destoryBullet(x - xcount);
+                xcount++;
+            }
+        }
+    }
+
+    function checkEnemyBullet() {
+        var xcount = 0;
+        for (var x = 0; x < enemyBulletList.length; x++) {
+            if (collide(enemyBulletList[x - xcount], wallList)) {
+                destoryEnemyBullet(x - xcount);
+                xcount++;
+            }
+        }
+    }
+
+    function destoryBullet(x) {
+        scene.remove(scene.getObjectByName(bulletList[x].mesh.name));
+        bulletList.splice(x, 1);
+    }
+
+    function destoryEnemyBullet(x) {
+        scene.remove(scene.getObjectByName(enemyBulletList[x].mesh.name));
+        enemyBulletList.splice(x, 1);
+    }
+
+    function checkHP() {
+        var xcount = 0;
+        for (var x = 0; x < enemyList.length; x++) {
+            var kcount = 0;
+            for (var k = 0; k < bulletList.length; k++) {
+                var dx = enemyList[x - xcount].mesh.position.x - bulletList[k - kcount].mesh.position.x;
+                var dy = enemyList[x - xcount].mesh.position.y - bulletList[k - kcount].mesh.position.y;
+                if (dx * dx + dy * dy <= 64) {
+                    destoryBullet(k);
+                    kcount++;
+                    if (injure(x - xcount)) {
+                        xcount++;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    function injure(x) {
+        var hp = enemyList[x].hp--;
+
+        enemyList[x].mesh.children[9 - hp].material.color = new THREE.Color().setRGB(0.2, 0.05, 0.03);
+
+        if (enemyList[x].hp <= 0) {
+            scene.remove(scene.getObjectByName(enemyList[x].mesh.name));
+            enemyList.splice(x, 1);
+            return true;
+        }
+        return false;
+    }
+
+    function playerInjure() {
+        var hp = mainPlayer.hp--;
+        mainPlayer.mesh.children[9 - hp].material.color = new THREE.Color().setRGB(0.2, 0.05, 0.03);
+
+        if (mainPlayer.hp <= 0) {
+            mainPlayer.hp = 8;
+            for (var x = 1; x < 9; x++) {
+                mainPlayer.mesh.children[x].material.color = mainPlayer.color;
+                mainPlayer.mesh.position.x = 40;
+                mainPlayer.mesh.position.y = 40;
+            }
+        }
+    }
+
+    function enemyMove() {
+        for (var x = 0; x < enemyList.length; x++) {
+            enemyList[x].move();
+        }
+    }
+
+    var enemybulletcount = 0;
+
+    function enemyBullet() {
+        for (var x = 0; x < enemyList.length; x++) {
+            if (Math.random() > 0.99) {
+                var sx = enemyList[x].mesh.position.x;
+                var sy = enemyList[x].mesh.position.y;
+                var ang = 3.14 - Math.random() * 6.28;
+                var ex = sx + 100 * Math.cos(ang);
+                var ey = sy + 100 * Math.sin(ang);
+                var name = 'enemybullet_' + enemybulletcount;
+                enemybulletcount++;
+                createEnemyBullet(name, sx, sy, ex, ey, 100, enemyList[x].mesh.children[0].material.color);
+            }
+        }
+    }
+
+    function checkPlayer() {
+        var xcount = 0;
+        for (var x = 0; x < enemyBulletList.length; x++) {
+
+            var dx = mainPlayer.mesh.position.x - enemyBulletList[x - xcount].mesh.position.x;
+            var dy = mainPlayer.mesh.position.y - enemyBulletList[x - xcount].mesh.position.y;
+            if (dx * dx + dy * dy <= 64) {
+                console.log('player injure');
+                destoryEnemyBullet(x);
+                xcount++;
+                playerInjure();
+            }
+        }
+    }
+
+
+    function loop() {
+
+        for (var x in bulletList) {
+            bulletList[x].move(x);
+        }
+        for (var x in enemyBulletList) {
+            enemyBulletList[x].enemybulletmove(x);
+        }
+        playerMove();
+        camera.position.x = mainPlayer.mesh.position.x;
+        camera.position.y = mainPlayer.mesh.position.y;
+
+        enemyMove();
+        enemyBullet();
+
+        checkBullet();
+        checkEnemyBullet();
+        checkHP();
+
+        checkPlayer();
+        createNewEnemy();
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(loop, 1);
+    }
+    // scene.remove(scene.getObjectByName("A"));
+    createScene();
+    createLights();
+    initAllWall();
+    initEnemy();
+
+    function createNewEnemy() {
+        if (enemyList.length < 10) {
+            createAnEnemy();
+        }
+    }
+
+    function createAnEnemy() {
+        var x = 500 - Math.floor(Math.random() * 1000);
+        var y = 500 - Math.floor(Math.random() * 500);
+        var enemy = createEnemy("enemy_" + (enemyList.length - 1), x, y);
+        while (collide(enemy, wallList)) {
+            x = 500 - Math.floor(Math.random() * 1000);
+            y = 500 - Math.floor(Math.random() * 500);
+            enemy.mesh.position.x = x;
+            enemy.mesh.position.y = y;
+        }
+    }
+
+    function initEnemy() {
+        for (var i = 0; i < 10; i++) {
+            createAnEnemy();
+        }
+    }
+
+    function initAllWall() {
+        createWall("wall_up", 0, 500, 1000, true);
+        createWall("wall_down", 0, 0, 1000, true);
+        createWall("wall_left", -500, 250, 500, false);
+        createWall("wall_right", 500, 250, 500, false);
+        createWall("wall_mid_1", -450, 250, 100, true);
+        createWall("wall_mid_2", -200, 250, 200, true);
+        createWall("wall_mid_3", 200, 250, 200, true);
+        createWall("wall_mid_4", 450, 250, 100, true);
+        createWall("wall_mid_4", -200, 250, 200, false);
+        createWall("wall_mid_4", 200, 250, 200, false);
+        createWall("wall_up_1", 0, 350, 100, false);
+        createWall("wall_up_2", 0, 400, 200, true);
+        createWall("wall_down_1", 0, 150, 100, false);
+        createWall("wall_down_2", 0, 100, 200, true);
+        createWall("wall_leftup_1", -350, 370, 60, false);
+        createWall("wall_leftup_2", -350, 400, 100, true);
+        createWall("wall_leftdown_1", -350, 130, 60, false);
+        createWall("wall_leftdown_2", -350, 100, 100, true);
+        createWall("wall_righttup_1", 350, 370, 60, false);
+        createWall("wall_rightup_2", 350, 400, 100, true);
+        createWall("wall_rightdown_1", 350, 130, 60, false);
+        createWall("wall_rightdown_2", 350, 100, 100, true);
+    }
+
+    createMainPlayer("MainPlayer", 40, 40);
+    var mousePos = {
+        x: 0,
+        y: 0
+    };
+
+    function handleMouseMove(event) {
+        var tx = -1 + (event.clientX / WIDTH) * 2;
+        var ty = 1 - (event.clientY / HEIGHT) * 2;
+        mousePos = {
+            x: tx * WIDTH,
+            y: ty * HEIGHT
+        };
+    }
+
+    function handleMouseClick(event) {
+        // var tx = -1 + (event.clientX / WIDTH) * 2;
+        // var ty = 1 - (event.clientY / HEIGHT) * 2;
+        var tx = event.clientX - WIDTH / 2;
+        var ty = HEIGHT / 2 - event.clientY;
+        var tag = ty < 0 ? -1 : 1;
+        var ang = Math.atan(tx / ty);
+        var distance = 100;
+        var dis = {
+            x: mainPlayer.mesh.position.x + distance * Math.sin(ang) * tag,
+            y: mainPlayer.mesh.position.y + distance * Math.cos(ang) * tag
+        }
+
+        var sx = mainPlayer.mesh.position.x;
+        var sy = mainPlayer.mesh.position.y;
+        var name = 'bullet' + next;
+        next++;
+        createBullet(name, sx, sy, dis.x, dis.y, 50, mainPlayer.mesh.children[0].material.color);
+    }
+
+    var config = {
+        KEY_UP: 87,
+        KEY_LEFT: 65,
+        KEY_DOWN: 83,
+        KEY_RIGHT: 68
+    }
+
+    document.addEventListener('mousedown', handleMouseClick, false);
+    // document.addEventListener('mousemove', handleMouseMove, false);
+    document.addEventListener('keydown', handleKeyDown, false);
+    document.addEventListener('keyup', handleKeyUp, false);
+    var moveUp = 0,
+        moveDown = 0,
+        moveLeft = 0,
+        moveRight = 0;
+
+    function handleKeyDown(event) {
+        switch (event.keyCode) {
+            case config.KEY_UP:
+                moveUp = 1;
+                break;
+            case config.KEY_DOWN:
+                moveDown = 1;
+                break;
+            case config.KEY_LEFT:
+                moveRight = 1;
+                break;
+            case config.KEY_RIGHT:
+                moveLeft = 1;
+                break;
+        }
+    }
+
+    function handleKeyUp(event) {
+        switch (event.keyCode) {
+            case config.KEY_UP:
+                moveUp = 0;
+                break;
+            case config.KEY_DOWN:
+                moveDown = 0;
+                break;
+            case config.KEY_LEFT:
+                moveRight = 0;
+                break;
+            case config.KEY_RIGHT:
+                moveLeft = 0;
+                break;
+        }
+    }
+
+    loop();
+    </script>
+</body>
+
+</html>

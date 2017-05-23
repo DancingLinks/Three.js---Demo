@@ -1,0 +1,61 @@
+footer {
+    padding: 30px;
+    margin-top: 70px;
+    border-top: 1px solid #e5e5e5;
+}
+
+html, body {
+    color: #505050;
+    line-height: 1.75em;
+    background: #ebebeb;
+    position: relative;
+    font-family: "Helvetica Neue", Helvetica, Arial, "Hiragino Sans GB", "Hiragino Sans GB W3", "WenQuanYi Micro Hei", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+}
+
+.navbar-default {
+    background: #ffffff;
+    border-top: 1px solid #ebebeb;
+    margin-bottom: 35px;
+    border-bottom: 2px solid #e1e1e1;
+}
+
+.main-content {
+    margin-top: 90px;
+}
+
+.sidebar {
+    padding-left: 30px;
+    position: relative;
+}
+
+.panel-card {
+    padding: 35px;
+    background: #ffffff;
+    margin-bottom: 50px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn {
+    border: none !important;
+    order-radius: 2px;
+    background-image: none;
+}
+
+form .form-group div input {
+    display: block;
+    width: 100%;
+    height: 34px;
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #555;
+    background-color: #fff;
+    background-image: none;
+    border: 1px solid #ccc;
+}
+
+form .form-group div input:focus {
+    border-color: #66afe9;
+    outline: 0;
+}
