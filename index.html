@@ -384,11 +384,11 @@
     function playerMove() {
         var originX = mainPlayer.mesh.position.x;
         var originY = mainPlayer.mesh.position.y;
-        mainPlayer.mesh.position.y += 3 * (moveUp - moveDown);
+        mainPlayer.mesh.position.y += 2 * (moveUp - moveDown);
         while (collide(mainPlayer, wallList)) {
             mainPlayer.mesh.position.y -= moveUp - moveDown;
         }
-        mainPlayer.mesh.position.x += 3 * (moveLeft - moveRight);
+        mainPlayer.mesh.position.x += 2 * (moveLeft - moveRight);
         while (collide(mainPlayer, wallList)) {
             mainPlayer.mesh.position.x -= moveLeft - moveRight;
         }
@@ -445,14 +445,20 @@
     }
 
     function injure(x) {
-        var hp = enemyList[x].hp--;
+        var enemy = enemyList[x]
+        var hp = enemy.hp--;
 
-        enemyList[x].mesh.children[9 - hp].material.color = new THREE.Color().setRGB(0.2, 0.05, 0.03);
+        enemy.mesh.children[9 - hp].material.color = new THREE.Color().setRGB(0.2, 0.05, 0.03);
 
-        if (enemyList[x].hp <= 0) {
-            scene.remove(scene.getObjectByName(enemyList[x].mesh.name));
-            enemyList.splice(x, 1);
-            return true;
+        if (enemy.hp <= 0) {
+
+            enemy.hp = 8;
+            for (var x = 1; x < 9; x++) {
+                enemy.mesh.children[x].material.color = enemy.color;
+                enemy.mesh.position.x = 480 - Math.random() * 960;
+                enemy.mesh.position.y = 480 - Math.random() * 480;
+            }
+            return false;
         }
         return false;
     }
@@ -481,12 +487,13 @@
 
     function enemyBullet() {
         for (var x = 0; x < enemyList.length; x++) {
-            if (Math.random() > 0.99) {
+            if (Math.random() > 0.98) {
                 var sx = enemyList[x].mesh.position.x;
                 var sy = enemyList[x].mesh.position.y;
                 var ang = 3.14 - Math.random() * 6.28;
-                var ex = sx + 100 * Math.cos(ang);
-                var ey = sy + 100 * Math.sin(ang);
+                enemyList[x].mesh.rotation.z = -ang;
+                var ex = sx + 200 * Math.sin(ang);
+                var ey = sy + 200 * Math.cos(ang);
                 var name = 'enemybullet_' + enemybulletcount;
                 enemybulletcount++;
                 createEnemyBullet(name, sx, sy, ex, ey, 100, enemyList[x].mesh.children[0].material.color);
@@ -530,7 +537,6 @@
         checkHP();
 
         checkPlayer();
-        createNewEnemy();
 
         renderer.render(scene, camera);
         requestAnimationFrame(loop, 1);
@@ -541,19 +547,13 @@
     initAllWall();
     initEnemy();
 
-    function createNewEnemy() {
-        if (enemyList.length < 10) {
-            createAnEnemy();
-        }
-    }
-
     function createAnEnemy() {
-        var x = 500 - Math.floor(Math.random() * 1000);
-        var y = 500 - Math.floor(Math.random() * 500);
+        var x = 480 - Math.floor(Math.random() * 960);
+        var y = 480 - Math.floor(Math.random() * 480);
         var enemy = createEnemy("enemy_" + (enemyList.length - 1), x, y);
         while (collide(enemy, wallList)) {
-            x = 500 - Math.floor(Math.random() * 1000);
-            y = 500 - Math.floor(Math.random() * 500);
+            x = 480 - Math.floor(Math.random() * 960);
+            y = 480 - Math.floor(Math.random() * 480);
             enemy.mesh.position.x = x;
             enemy.mesh.position.y = y;
         }
@@ -591,18 +591,18 @@
     }
 
     createMainPlayer("MainPlayer", 40, 40);
+    // mainPlayer.mesh.rotation.z += 6.28;
     var mousePos = {
         x: 0,
         y: 0
     };
 
     function handleMouseMove(event) {
-        var tx = -1 + (event.clientX / WIDTH) * 2;
-        var ty = 1 - (event.clientY / HEIGHT) * 2;
-        mousePos = {
-            x: tx * WIDTH,
-            y: ty * HEIGHT
-        };
+        var tx = event.clientX - WIDTH / 2;
+        var ty = HEIGHT / 2 - event.clientY;
+        var tag = ty < 0 ? -1 : 0;
+        var ang = Math.atan(tx / ty);
+        mainPlayer.mesh.rotation.z = 3.14 * tag - ang;
     }
 
     function handleMouseClick(event) {
@@ -612,7 +612,7 @@
         var ty = HEIGHT / 2 - event.clientY;
         var tag = ty < 0 ? -1 : 1;
         var ang = Math.atan(tx / ty);
-        var distance = 100;
+        var distance = 200;
         var dis = {
             x: mainPlayer.mesh.position.x + distance * Math.sin(ang) * tag,
             y: mainPlayer.mesh.position.y + distance * Math.cos(ang) * tag
@@ -633,7 +633,7 @@
     }
 
     document.addEventListener('mousedown', handleMouseClick, false);
-    // document.addEventListener('mousemove', handleMouseMove, false);
+    document.addEventListener('mousemove', handleMouseMove, false);
     document.addEventListener('keydown', handleKeyDown, false);
     document.addEventListener('keyup', handleKeyUp, false);
     var moveUp = 0,
