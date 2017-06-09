@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <title>
-        Pomelo
+        Hackbuteer
     </title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -22,7 +22,8 @@
     <link rel="stylesheet" href="css/extra.css" type="text/css" />
     <script src="js/lib/build/build.js" type="text/javascript"></script>
     <link rel="stylesheet" type="text/css" href="css/demo.css" />
-    <link rel="stylesheet" type="text/css" href="css/styles.css" />
+    <link rel="stylesheet" type="text/css" href="css/game.css" />
+    <!-- <link rel="stylesheet" type="text/css" href="css/styles.css" /> -->
     <script type="text/javascript" src="js/three.min.js"></script>
     <script type="text/javascript" src="js/main_step.js" /></script>
     <!--[if IE]>
@@ -44,7 +45,33 @@
 </head>
 
 <body>
-    <div class="world" id="world"></div>
+    <div class="game-holder" id="gameHolder">
+        <div class="header">
+            <h1 style="margin-bottom: 15px;">Hackbuteer</h1>
+            <h2>fight forever, even dead</h2>
+            <div class="score" id="score">
+                <div class="score__content" id="level">
+                    <div class="score__label">level</div>
+                    <div class="score__value score__value--level" id="levelValue">1</div>
+                    <svg class="level-circle" id="levelCircle" viewbox="0 0 200 200">
+                        <circle id="levelCircleBgr" r="80" cx="100" cy="100" fill="none" stroke="#d1b790" stroke-width="24px" />
+                        <circle id="levelCircleStroke" r="80" cx="100" cy="100" fill="none" #f25346 stroke="#68c3c0" stroke-width="14px" stroke-dasharray="502" />
+                    </svg>
+                </div>
+                <div class="score__content" id="dist">
+                    <div class="score__label">SCORE</div>
+                    <div class="score__value score__value--dist" id="scoreValue">000</div>
+                </div>
+                <div class="score__content" id="energy">
+                    <div class="score__label">DEADTIME</div>
+                    <div class="score__value score__value--dist" id="deadtimeValue">00</div>
+                </div>
+                <p style="position:absolute;left:-10px;top:-10px;">.</p>
+            </div>
+        </div>
+        <div class="world" id="world"></div>
+    </div>
+    <!-- <div class="world" id="world"> -->
     <script type="text/javascript">
     var Colors = {
         red: 0xf25346,
@@ -82,6 +109,15 @@
     var scene,
         camera, fieldOfView, aspectRatio, nearPlane, farPlane,
         renderer, container;
+
+    var fieldScoreValue = document.getElementById("scoreValue");
+    var fieldDeadtimeValue = document.getElementById("deadtimeValue");
+    var fieldLevelValue = document.getElementById("levelValue");
+    var levelCircle = document.getElementById("levelCircleStroke");
+    var score = 0;
+    var deadtime = 0;
+    var level = 1;
+    var levelScore = 0;
 
     var mainPlayer;
     var enemyList = new Array();
@@ -451,7 +487,7 @@
         enemy.mesh.children[9 - hp].material.color = new THREE.Color().setRGB(0.2, 0.05, 0.03);
 
         if (enemy.hp <= 0) {
-
+            displayScore();
             enemy.hp = 8;
             for (var x = 1; x < 9; x++) {
                 enemy.mesh.children[x].material.color = enemy.color;
@@ -468,6 +504,7 @@
         mainPlayer.mesh.children[9 - hp].material.color = new THREE.Color().setRGB(0.2, 0.05, 0.03);
 
         if (mainPlayer.hp <= 0) {
+            displayDead();
             mainPlayer.hp = 8;
             for (var x = 1; x < 9; x++) {
                 mainPlayer.mesh.children[x].material.color = mainPlayer.color;
@@ -529,6 +566,7 @@
         camera.position.x = mainPlayer.mesh.position.x;
         camera.position.y = mainPlayer.mesh.position.y;
 
+        mainPlayer.move();
         enemyMove();
         enemyBullet();
 
@@ -597,6 +635,31 @@
         y: 0
     };
 
+    function displayDead() {
+        levelScore = 0;
+        level = 1;
+        fieldLevelValue.innerHTML = level;
+        deadtime++;
+        fieldDeadtimeValue.innerHTML = deadtime;
+        levelCircle.setAttribute("stroke-dashoffset", 500);
+    }
+
+    levelCircle.setAttribute("stroke-dashoffset", 500);
+
+    function displayScore() {
+        score++;
+        fieldScoreValue.innerHTML = score;
+        levelScore++;
+        var d = 500 - levelScore * 100;
+        levelCircle.setAttribute("stroke-dashoffset", d);
+        if (levelScore > 5) {
+            levelScore = 0;
+            level++;
+            fieldLevelValue.innerHTML = level;
+            levelCircle.setAttribute("stroke-dashoffset", 500);
+        }
+    }
+
     function handleMouseMove(event) {
         var tx = event.clientX - WIDTH / 2;
         var ty = HEIGHT / 2 - event.clientY;
@@ -617,6 +680,9 @@
             x: mainPlayer.mesh.position.x + distance * Math.sin(ang) * tag,
             y: mainPlayer.mesh.position.y + distance * Math.cos(ang) * tag
         }
+
+        mainPlayer.ang = mainPlayer.mesh.rotation.z + 1.57;
+        mainPlayer.count = 50;
 
         var sx = mainPlayer.mesh.position.x;
         var sy = mainPlayer.mesh.position.y;
