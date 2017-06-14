@@ -125,6 +125,7 @@
     var next = 0;
     var bulletList = new Array();
     var enemyBulletList = new Array();
+    var heartList = new Array();
 
     var HEIGHT, WIDTH;
 
@@ -286,6 +287,28 @@
         this.mesh.add(cockpit);
     }
 
+    Heart = function(name) {
+
+        this.mesh = new THREE.Object3D();
+        this.mesh.name = name;
+
+        var geomCockpit = new THREE.SphereGeometry(3);
+        var matCockpit = new THREE.MeshPhongMaterial({
+            color: Colors.red,
+            shading: THREE.SmoothShading
+        });
+
+        var cockpit = new THREE.Mesh(geomCockpit, matCockpit);
+        cockpit.castShadow = true;
+        cockpit.receiveShadow = true;
+        this.mesh.add(cockpit);
+    }
+
+    Heart.prototype.reset = function() {
+        this.mesh.position.x = 480 - Math.floor(Math.random() * 960);
+        this.mesh.position.y = 480 - Math.floor(Math.random() * 480);
+    }
+
     function createEnemyBullet(name, sx, sy, ex, ey, v, color) {
         var bullet = new Bullet(name, color);
         bullet.mesh.position.x = sx;
@@ -358,7 +381,6 @@
         this.ang = 3.14 - Math.random() * 6.28;
         this.count = 100;
     }
-
 
     function create(name, x, y) {
         var airplane = new AirPlane(name);
@@ -514,6 +536,11 @@
         }
     }
 
+    function playerHeart() {
+        var hp = mainPlayer.hp++;
+        mainPlayer.mesh.children[8 - hp].material.color = mainPlayer.color;
+    }
+
     function enemyMove() {
         for (var x = 0; x < enemyList.length; x++) {
             enemyList[x].move();
@@ -539,16 +566,30 @@
     }
 
     function checkPlayer() {
-        var xcount = 0;
+        // var xcount = 0;
         for (var x = 0; x < enemyBulletList.length; x++) {
 
-            var dx = mainPlayer.mesh.position.x - enemyBulletList[x - xcount].mesh.position.x;
-            var dy = mainPlayer.mesh.position.y - enemyBulletList[x - xcount].mesh.position.y;
+            var dx = mainPlayer.mesh.position.x - enemyBulletList[x].mesh.position.x;
+            var dy = mainPlayer.mesh.position.y - enemyBulletList[x].mesh.position.y;
+            // var dx = mainPlayer.mesh.position.x - enemyBulletList[x - xcount].mesh.position.x;
+            // var dy = mainPlayer.mesh.position.y - enemyBulletList[x - xcount].mesh.position.y;
             if (dx * dx + dy * dy <= 64) {
                 console.log('player injure');
                 destoryEnemyBullet(x);
-                xcount++;
+                // xcount++;
                 playerInjure();
+            }
+        }
+    }
+
+    function checkHeart() {
+        if(mainPlayer.hp >= 8) return;
+        for (var x = 0; x < heartList.length; x++) {
+            var dx = mainPlayer.mesh.position.x - heartList[x].mesh.position.x;
+            var dy = mainPlayer.mesh.position.y - heartList[x].mesh.position.y;
+            if (dx * dx + dy * dy <= 81) {
+                heartList[x].reset();
+                playerHeart();
             }
         }
     }
@@ -573,6 +614,7 @@
         checkBullet();
         checkEnemyBullet();
         checkHP();
+        checkHeart();
 
         checkPlayer();
 
@@ -582,8 +624,19 @@
     // scene.remove(scene.getObjectByName("A"));
     createScene();
     createLights();
+    createHearts();
     initAllWall();
     initEnemy();
+
+    function createHearts() {
+        for (let i = 0; i < 10; i++) {
+            let heart = new Heart("heart_" + i);
+            heart.mesh.position.x = 480 - Math.floor(Math.random() * 960);
+            heart.mesh.position.y = 480 - Math.floor(Math.random() * 480);
+            scene.add(heart.mesh);
+            heartList.push(heart);
+        }
+    }
 
     function createAnEnemy() {
         var x = 480 - Math.floor(Math.random() * 960);
@@ -598,7 +651,7 @@
     }
 
     function initEnemy() {
-        for (var i = 0; i < 10; i++) {
+        for (var i = 0; i < 8; i++) {
             createAnEnemy();
         }
     }
